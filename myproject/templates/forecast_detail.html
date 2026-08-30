@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forecast — Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0B1220; --panel:#111A2C; --panel-2:#0E1626; --border:#20304A;
+    --text:#E7ECF3; --muted:#8B96A8; --teal:#4FD1C5; --coral:#FF6B5E; --violet:#A78BFA;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1160px; margin:0 auto; padding:32px 28px 80px;}
+
+  header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:28px; }
+  .logo{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:700; font-size:18px;}
+  .logo .dot{ width:10px; height:10px; border-radius:50%; background:var(--coral); box-shadow:0 0 0 4px rgba(255,107,94,0.15); }
+  .back-link{ font-size:13.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .back-link:hover{ color:var(--text); }
+
+  .title-row{ margin-bottom:28px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:.1em; color:var(--violet);
+    text-transform:uppercase; margin-bottom:8px; display:block;
+  }
+  .title-row h1{ font-size:28px; }
+  .title-row p{ color:var(--muted); font-size:14.5px; margin-top:8px; }
+
+  .stats-row{ display:grid; grid-template-columns:repeat(3, 1fr); gap:14px; margin-bottom:28px; }
+  @media(max-width:700px){ .stats-row{ grid-template-columns:1fr; } }
+  .stat-card{ background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px 18px; }
+  .stat-card .label{ font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat-card .value{ font-size:22px; font-weight:600; margin-top:6px; font-family:'Space Grotesk'; color:var(--violet); }
+
+  .chart-card{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--border); border-radius:16px; padding:22px; margin-bottom:32px;
+  }
+  .chart-card .chart-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .chart-card h2{ font-size:16px; }
+  .legend{ display:flex; gap:18px; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); font-family:'IBM Plex Mono'; }
+  .swatch{ width:12px; height:12px; border-radius:3px; }
+  #forecast-chart-container{ height:380px; position:relative; }
+
+  .table-card{ background:var(--panel); border:1px solid var(--border); border-radius:16px; overflow:hidden; }
+  .table-head{ padding:20px 22px; border-bottom:1px solid var(--border); }
+  .table-head h2{ font-size:16px; }
+  .table-head p{ color:var(--muted); font-size:13px; margin-top:4px; }
+
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em; padding:12px 22px; border-bottom:1px solid var(--border);
+  }
+  tbody td{ padding:13px 22px; font-size:13.5px; border-bottom:1px solid rgba(32,48,74,0.5); }
+  tbody tr:hover{ background:rgba(255,255,255,0.02); }
+  tbody tr:last-child td{ border-bottom:none; }
+
+  .empty-state{ padding:60px 20px; text-align:center; color:var(--muted); }
+  .loading-state{ padding:60px 20px; text-align:center; color:var(--muted); font-family:'IBM Plex Mono'; font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> Pulse</div>
+    <a class="back-link" href="{% url 'landing_page' %}">← Back to dashboard</a>
+  </header>
+
+  <div class="title-row">
+    <span class="eyebrow">● Forecast Results</span>
+    <h1 id="dataset-title">Loading forecast…</h1>
+    <p id="dataset-subtitle"></p>
+  </div>
+
+  <div class="stats-row" id="stats-row" style="display:none;">
+    <div class="stat-card">
+      <div class="label">Forecast Points</div>
+      <div class="value" id="stat-count">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Model Used</div>
+      <div class="value" id="stat-model" style="font-size:16px;">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Next Predicted Value</div>
+      <div class="value" id="stat-next">—</div>
+    </div>
+  </div>
+
+  <div class="stat-card">
+  <div class="label">Forecast Accuracy (MAPE)</div>
+  <div class="value" id="stat-mape">—</div>
+</div><br>
+
+  <div class="chart-card">
+    <div class="chart-head">
+      <h2>Historical data + forecast</h2>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:#4FD1C5"></span>Historical</div>
+        <div class="legend-item"><span class="swatch" style="background:#A78BFA"></span>Forecast</div>
+        <div class="legend-item"><span class="swatch" style="background:rgba(167,139,250,0.2); border:1px dashed #A78BFA;"></span>Confidence band</div>
+      </div>
+    </div>
+    <div id="forecast-chart-container">
+      <canvas id="forecast-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head">
+      <h2>Forecast values</h2>
+      <p>Each predicted point with its 95% confidence range.</p>
+    </div>
+    <div id="table-body-wrap">
+      <div class="loading-state">Loading forecast details…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const datasetId = "{{ dataset.id }}";
+  let chartInstance = null;
+
+  async function loadForecastData() {
+    try {
+      const response = await fetch(`/dataset/${datasetId}/forecast/data/`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        document.getElementById('dataset-title').textContent = 'No forecast available';
+        document.getElementById('table-body-wrap').innerHTML =
+          `<div class="empty-state">${data.error || 'Run a forecast first.'}</div>`;
+        return;
+      }
+
+      renderHeader(data);
+      renderStats(data);
+      renderChart(data.history, data.forecasts);
+      renderTable(data.forecasts);
+
+    } catch (err) {
+      document.getElementById('dataset-title').textContent = 'Network error';
+      document.getElementById('table-body-wrap').innerHTML =
+        `<div class="empty-state">Could not reach the server. Please try again.</div>`;
+    }
+  }
+
+  function renderHeader(data) {
+    document.getElementById('dataset-title').textContent = data.dataset_name;
+    document.getElementById('dataset-subtitle').textContent =
+      `${data.forecast_count} future points predicted using ${data.model_used}`;
+  }
+
+  function renderStats(data) {
+    document.getElementById('stats-row').style.display = 'grid';
+    document.getElementById('stat-count').textContent = data.forecast_count;
+    document.getElementById('stat-model').textContent = data.model_used.toUpperCase();
+    document.getElementById('stat-next').textContent = data.forecasts.length ? data.forecasts[0].predicted_value : '—';
+    document.getElementById('stat-mape').textContent = data.mape !== null ? `${data.mape}%` : 'N/A';
+}
+  
+
+  function renderChart(history, forecasts) {
+    const ctx = document.getElementById('forecast-chart').getContext('2d');
+
+    const historyLabels = history.map(p => new Date(p.timestamp).toLocaleString());
+    const forecastLabels = forecasts.map(p => new Date(p.timestamp).toLocaleString());
+    const allLabels = [...historyLabels, ...forecastLabels];
+
+    const historyData = [...history.map(p => p.value), ...Array(forecasts.length).fill(null)];
+    const forecastData = [...Array(history.length - 1).fill(null), history.length ? history[history.length - 1].value : null, ...forecasts.map(p => p.predicted_value)];
+    const upperBand = [...Array(history.length).fill(null), ...forecasts.map(p => p.upper_bound)];
+    const lowerBand = [...Array(history.length).fill(null), ...forecasts.map(p => p.lower_bound)];
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allLabels,
+        datasets: [
+          {
+            label: 'Upper bound',
+            data: upperBand,
+            borderColor: 'transparent',
+            backgroundColor: 'rgba(167,139,250,0.12)',
+            pointRadius: 0,
+            fill: '+1',
+          },
+          {
+            label: 'Lower bound',
+            data: lowerBand,
+            borderColor: 'transparent',
+            backgroundColor: 'rgba(167,139,250,0.12)',
+            pointRadius: 0,
+            fill: false,
+          },
+          {
+            label: 'Historical',
+            data: historyData,
+            borderColor: '#4FD1C5',
+            borderWidth: 2,
+            pointRadius: 0,
+            tension: 0.15,
+          },
+          {
+            label: 'Forecast',
+            data: forecastData,
+            borderColor: '#A78BFA',
+            borderWidth: 2,
+            borderDash: [6, 6],
+            pointRadius: 0,
+            tension: 0.15,
+          },
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111A2C', borderColor: '#20304A', borderWidth: 1,
+            titleColor: '#E7ECF3', bodyColor: '#8B96A8', padding: 10,
+          }
+        },
+        scales: {
+          x: { ticks: { color: '#8B96A8', maxTicksLimit: 8, font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#1C2A42' } },
+          y: { ticks: { color: '#8B96A8', font: { family: 'IBM Plex Mono', size: 10 } }, grid: { color: '#1C2A42' } }
+        }
+      }
+    });
+  }
+
+  function renderTable(forecasts) {
+    const wrap = document.getElementById('table-body-wrap');
+
+    if (forecasts.length === 0) {
+      wrap.innerHTML = `<div class="empty-state">No forecast data available.</div>`;
+      return;
+    }
+
+    const rows = forecasts.map(f => `
+      <tr>
+        <td class="mono" style="color:var(--muted);">${new Date(f.timestamp).toLocaleString()}</td>
+        <td class="mono">${f.predicted_value}</td>
+        <td class="mono" style="color:var(--muted);">${f.lower_bound ?? '—'}</td>
+        <td class="mono" style="color:var(--muted);">${f.upper_bound ?? '—'}</td>
+      </tr>
+    `).join('');
+
+    wrap.innerHTML = `
+      <table>
+        <thead>
+          <tr><th>Timestamp</th><th>Predicted Value</th><th>Lower Bound</th><th>Upper Bound</th></tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  loadForecastData();
+</script>
+
+</body>
+</html>

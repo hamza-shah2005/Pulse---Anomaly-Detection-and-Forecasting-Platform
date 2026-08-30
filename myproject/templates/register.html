@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Register — Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0B1220;
+    --panel:#111A2C;
+    --panel-2:#0E1626;
+    --border:#20304A;
+    --text:#E7ECF3;
+    --muted:#8B96A8;
+    --teal:#4FD1C5;
+    --coral:#FF6B5E;
+    --violet:#A78BFA;
+    --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; min-height:100vh;
+    background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    display:flex; flex-direction:column;
+  }
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit; text-decoration:none;}
+
+  body::before{
+    content:""; position:fixed; inset:0;
+    background:
+      radial-gradient(700px 400px at 15% -5%, rgba(167,139,250,0.10), transparent 60%),
+      radial-gradient(600px 400px at 90% 100%, rgba(79,209,197,0.08), transparent 60%);
+    pointer-events:none; z-index:0;
+  }
+
+  header{ position:relative; z-index:1; padding:22px 28px; }
+  .logo{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:700; font-size:18px; width:fit-content;}
+  .logo .dot{
+    width:10px; height:10px; border-radius:50%; background:var(--coral);
+    box-shadow:0 0 0 4px rgba(255,107,94,0.15);
+    animation:pulse 2.2s ease-in-out infinite;
+  }
+  @keyframes pulse{
+    0%,100%{transform:scale(1); box-shadow:0 0 0 4px rgba(255,107,94,0.15);}
+    50%{transform:scale(1.25); box-shadow:0 0 0 7px rgba(255,107,94,0.08);}
+  }
+
+  main{
+    flex:1; display:flex; align-items:center; justify-content:center;
+    position:relative; z-index:1; padding:24px;
+  }
+
+  .auth-grid{
+    display:grid; grid-template-columns:1fr 1fr; max-width:960px; width:100%;
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--border); border-radius:20px; overflow:hidden;
+  }
+  @media(max-width:800px){ .auth-grid{ grid-template-columns:1fr; } .side{ display:none; } }
+
+  .side{
+    padding:40px; border-right:1px solid var(--border);
+    display:flex; flex-direction:column; justify-content:space-between;
+    background:rgba(255,255,255,0.015);
+  }
+  .side .eyebrow{
+    display:inline-flex; align-items:center; gap:8px; width:fit-content;
+    font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:.1em; color:var(--violet);
+    text-transform:uppercase; border:1px solid rgba(167,139,250,0.3);
+    background:rgba(167,139,250,0.07); padding:5px 11px; border-radius:100px;
+  }
+  .side h2{ font-size:26px; margin-top:22px; line-height:1.25; }
+  .side p{ color:var(--muted); font-size:14px; margin-top:14px; line-height:1.6; }
+
+  .side ul{ list-style:none; padding:0; margin:26px 0 0; display:flex; flex-direction:column; gap:14px; }
+  .side li{ display:flex; align-items:flex-start; gap:10px; font-size:13.5px; color:var(--muted); }
+  .side li svg{ width:16px; height:16px; stroke:var(--teal); flex-shrink:0; margin-top:1px; }
+
+  .form-col{ padding:44px; }
+  .form-col h1{ font-size:24px; }
+  .form-col .sub{ color:var(--muted); font-size:14px; margin-top:8px; }
+
+  .field{ margin-top:20px; }
+  .field label{
+    display:block; font-family:'IBM Plex Mono'; font-size:12px; color:var(--muted);
+    margin-bottom:8px; letter-spacing:.02em;
+  }
+  .field input{
+    width:100%; background:var(--bg); border:1px solid var(--border); color:var(--text);
+    padding:12px 14px; border-radius:9px; font-size:14px; font-family:'Inter';
+    transition:border-color .15s ease;
+  }
+  .field input::placeholder{ color:#5B6579; }
+  .field input:focus{ outline:none; border-color:var(--violet); }
+  .hint{ font-size:12px; color:#5B6579; margin-top:6px; }
+
+  .checkbox-row{ display:flex; align-items:flex-start; gap:8px; color:var(--muted); font-size:13px; margin-top:20px; }
+  .checkbox-row input{ accent-color:var(--violet); margin-top:2px; }
+  .checkbox-row a{ color:var(--text); border-bottom:1px solid var(--violet); }
+
+  .btn{
+    display:inline-flex; align-items:center; justify-content:center; gap:8px;
+    padding:13px 18px; border-radius:9px; font-size:14.5px; font-weight:600;
+    border:1px solid transparent; cursor:pointer; width:100%;
+    transition:transform .15s ease, background .15s ease;
+  }
+  .btn-primary{ background:var(--violet); color:#180F33; margin-top:24px; }
+  .btn-primary:hover{ transform:translateY(-1px); background:#b7a2fc; }
+
+  .divider{ display:flex; align-items:center; gap:12px; margin:24px 0; color:var(--muted); font-size:12px; font-family:'IBM Plex Mono'; }
+  .divider::before, .divider::after{ content:""; flex:1; height:1px; background:var(--border); }
+
+  .switch-row{ text-align:center; font-size:14px; color:var(--muted); margin-top:4px; }
+  .switch-row a{ color:var(--text); font-weight:600; border-bottom:1px solid var(--violet); padding-bottom:1px; }
+  .switch-row a:hover{ color:var(--violet); }
+
+  .form-alert{
+    margin-top:22px; padding:12px 14px; border-radius:9px;
+    background:rgba(255,107,94,0.08); border:1px solid rgba(255,107,94,0.3);
+  }
+  .form-alert p{
+    margin:0; font-size:13px; color:var(--coral); line-height:1.5;
+  }
+  .form-alert p + p{ margin-top:4px; }
+
+  :focus-visible{ outline:2px solid var(--violet); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){ *{ animation:none !important; transition:none !important; } }
+</style>
+</head>
+<body>
+
+<header>
+  <a class="logo" href="{% url 'landing_page' %}"><span class="dot"></span> Pulse</a>
+</header>
+
+<main>
+  <div class="auth-grid">
+
+    <div class="side">
+      <div>
+        <div class="eyebrow">● Get started</div>
+        <h2>Create an account and start watching your data.</h2>
+        <p>Set up takes under a minute — bring a dataset and you're analyzing within the hour.</p>
+
+        <ul>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Upload CSVs or connect a live data feed
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Automatic anomaly detection on every series
+          </li>
+          <li>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+            Forecasts with confidence bands, exportable reports
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="form-col">
+      <h1>Create your account</h1>
+      <p class="sub">Fill in your details to get started with Pulse.</p>
+
+      {% if messages %}
+      <div class="form-alert">
+        {% for message in messages %}
+          <p>{{ message }}</p>
+        {% endfor %}
+      </div>
+      {% endif %}
+
+      <form method="POST" action="{% url 'register' %}" id="register-form">
+        {% csrf_token %}
+
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" placeholder="ayesha_khan"
+                 value="{{ request.POST.username|default:'' }}" required>
+        </div>
+
+        <div class="field">
+          <label for="reg-email">Email</label>
+          <input id="reg-email" name="email" type="email" placeholder="you@university.edu"
+                 value="{{ request.POST.email|default:'' }}" required>
+        </div>
+
+        <div class="field">
+          <label for="reg-password">Password</label>
+          <input id="reg-password" name="password" type="password" placeholder="Create a password"
+                 minlength="8" required>
+          <div class="hint">Use at least 8 characters, including a number.</div>
+        </div>
+
+        <div class="field">
+          <label for="confirm-password">Confirm password</label>
+          <input id="confirm-password" name="confirm_password" type="password" placeholder="Re-enter your password" required>
+          <div class="hint" id="match-hint" style="display:none; color:var(--coral);">Passwords don't match.</div>
+        </div>
+
+        <label class="checkbox-row">
+          <input type="checkbox" name="agree_terms" required>
+          <span>I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.</span>
+        </label>
+
+        <button class="btn btn-primary" type="submit">Create Account →</button>
+      </form>
+
+      <div class="divider">ALREADY REGISTERED</div>
+
+      <p class="switch-row">Already have an account? <a href="{% url 'login' %}">Log in</a></p>
+    </div>
+
+  </div>
+</main>
+
+<script>
+  const form = document.getElementById('register-form');
+  const pass = document.getElementById('reg-password');
+  const confirm = document.getElementById('confirm-password');
+  const hint = document.getElementById('match-hint');
+
+  form.addEventListener('submit', (e) => {
+    if (pass.value !== confirm.value) {
+      e.preventDefault();
+      hint.style.display = 'block';
+      confirm.focus();
+    } else {
+      hint.style.display = 'none';
+    }
+  });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Anomaly Detection — Pulse</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0B1220; --panel:#111A2C; --panel-2:#0E1626; --border:#20304A;
+    --text:#E7ECF3; --muted:#8B96A8; --teal:#4FD1C5; --coral:#FF6B5E; --violet:#A78BFA;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--text);
+    font-family:'Inter',sans-serif; -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3{font-family:'Space Grotesk',sans-serif; margin:0; letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono',monospace;}
+  a{color:inherit; text-decoration:none;}
+  .wrap{max-width:1160px; margin:0 auto; padding:32px 28px 80px;}
+
+  header{
+    display:flex; align-items:center; justify-content:space-between;
+    margin-bottom:28px;
+  }
+  .logo{ display:flex; align-items:center; gap:10px; font-family:'Space Grotesk'; font-weight:700; font-size:18px;}
+  .logo .dot{
+    width:10px; height:10px; border-radius:50%; background:var(--coral);
+    box-shadow:0 0 0 4px rgba(255,107,94,0.15);
+  }
+  .back-link{ font-size:13.5px; color:var(--muted); display:flex; align-items:center; gap:6px; }
+  .back-link:hover{ color:var(--text); }
+
+  .title-row{ margin-bottom:28px; }
+  .eyebrow{
+    font-family:'IBM Plex Mono'; font-size:11px; letter-spacing:.1em; color:var(--coral);
+    text-transform:uppercase; margin-bottom:8px; display:block;
+  }
+  .title-row h1{ font-size:28px; }
+  .title-row p{ color:var(--muted); font-size:14.5px; margin-top:8px; }
+
+  .stats-row{
+    display:grid; grid-template-columns:repeat(5, 1fr); gap:14px; margin-bottom:28px;
+  }
+  @media(max-width:900px){ .stats-row{ grid-template-columns:repeat(2,1fr); } }
+  .stat-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:16px 18px;
+  }
+  .stat-card .label{ font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.04em; }
+  .stat-card .value{ font-size:22px; font-weight:600; margin-top:6px; font-family:'Space Grotesk'; }
+  .stat-card.coral .value{ color:var(--coral); }
+  .stat-card.teal .value{ color:var(--teal); }
+
+  .chart-card{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--border); border-radius:16px; padding:22px; margin-bottom:32px;
+  }
+  .chart-card .chart-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:16px; }
+  .chart-card h2{ font-size:16px; }
+  .legend{ display:flex; gap:18px; }
+  .legend-item{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); font-family:'IBM Plex Mono'; }
+  .swatch{ width:12px; height:12px; border-radius:3px; }
+  #anomaly-chart-container{ height:380px; position:relative; }
+
+  .table-card{
+    background:var(--panel); border:1px solid var(--border); border-radius:16px; overflow:hidden;
+  }
+  .table-head{ padding:20px 22px; border-bottom:1px solid var(--border); }
+  .table-head h2{ font-size:16px; }
+  .table-head p{ color:var(--muted); font-size:13px; margin-top:4px; }
+
+  table{ width:100%; border-collapse:collapse; }
+  thead th{
+    text-align:left; font-family:'IBM Plex Mono'; font-size:11px; color:var(--muted);
+    text-transform:uppercase; letter-spacing:.04em; padding:12px 22px; border-bottom:1px solid var(--border);
+  }
+  tbody td{ padding:13px 22px; font-size:13.5px; border-bottom:1px solid rgba(32,48,74,0.5); }
+  tbody tr:hover{ background:rgba(255,255,255,0.02); }
+  tbody tr:last-child td{ border-bottom:none; }
+
+  .severity-badge{
+    display:inline-block; padding:3px 9px; border-radius:100px; font-size:11px;
+    font-family:'IBM Plex Mono'; text-transform:uppercase; letter-spacing:.03em;
+  }
+  .severity-critical{ background:rgba(255,107,94,0.12); color:var(--coral); border:1px solid rgba(255,107,94,0.3); }
+  .severity-high{ background:rgba(255,107,94,0.08); color:#FF9088; border:1px solid rgba(255,107,94,0.2); }
+  .severity-moderate{ background:rgba(167,139,250,0.1); color:var(--violet); border:1px solid rgba(167,139,250,0.25); }
+
+  .empty-state{ padding:60px 20px; text-align:center; color:var(--muted); }
+  .loading-state{ padding:60px 20px; text-align:center; color:var(--muted); font-family:'IBM Plex Mono'; font-size:13px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div class="logo"><span class="dot"></span> Pulse</div>
+    <a class="back-link" href="{% url 'landing_page' %}">← Back to dashboard</a>
+  </header>
+
+  <div class="title-row">
+    <span class="eyebrow">● Anomaly Detection Results</span>
+    <h1 id="dataset-title">Loading dataset…</h1>
+    <p id="dataset-subtitle"></p>
+  </div>
+
+  <div class="stats-row" id="stats-row" style="display:none;">
+    <div class="stat-card">
+      <div class="label">Total Points</div>
+      <div class="value" id="stat-total">—</div>
+    </div>
+    <div class="stat-card coral">
+      <div class="label">Anomalies</div>
+      <div class="value" id="stat-anomalies">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Anomaly Rate</div>
+      <div class="value" id="stat-rate">—</div>
+    </div>
+    <div class="stat-card">
+      <div class="label">Mean Value</div>
+      <div class="value" id="stat-mean">—</div>
+    </div>
+    <div class="stat-card teal">
+      <div class="label">Model Used</div>
+      <div class="value" id="stat-model" style="font-size:15px;">—</div>
+    </div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-head">
+      <h2>Series with flagged anomalies</h2>
+      <div class="legend">
+        <div class="legend-item"><span class="swatch" style="background:#4FD1C5"></span>Normal</div>
+        <div class="legend-item"><span class="swatch" style="background:#FF6B5E"></span>Anomaly</div>
+      </div>
+    </div>
+    <div id="anomaly-chart-container">
+      <canvas id="anomaly-chart"></canvas>
+    </div>
+  </div>
+
+  <div class="table-card">
+    <div class="table-head">
+      <h2>Anomaly details</h2>
+      <p>Sorted by severity — how far each point deviates from the expected range.</p>
+    </div>
+    <div id="table-body-wrap">
+      <div class="loading-state">Loading anomaly details…</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  const datasetId = "{{ dataset.id }}";
+  let chartInstance = null;
+
+  async function loadAnomalyData() {
+    try {
+      const response = await fetch(`/dataset/${datasetId}/anomalies/data/`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        document.getElementById('dataset-title').textContent = 'Failed to load anomaly data';
+        document.getElementById('table-body-wrap').innerHTML =
+          `<div class="empty-state">${data.error || 'Something went wrong.'}</div>`;
+        return;
+      }
+
+      renderHeader(data);
+      renderStats(data);
+      renderChart(data.chart);
+      renderTable(data.anomalies);
+
+    } catch (err) {
+      document.getElementById('dataset-title').textContent = 'Network error';
+      document.getElementById('table-body-wrap').innerHTML =
+        `<div class="empty-state">Could not reach the server. Please try again.</div>`;
+    }
+  }
+
+  function renderHeader(data) {
+    document.getElementById('dataset-title').textContent = data.dataset_name;
+    document.getElementById('dataset-subtitle').textContent =
+      `${data.total_points.toLocaleString()} data points analyzed using ${data.model_used}`;
+  }
+
+  function renderStats(data) {
+    document.getElementById('stats-row').style.display = 'grid';
+    document.getElementById('stat-total').textContent = data.total_points.toLocaleString();
+    document.getElementById('stat-anomalies').textContent = data.anomaly_count.toLocaleString();
+    document.getElementById('stat-rate').textContent = `${data.anomaly_percent}%`;
+    document.getElementById('stat-mean').textContent = data.mean_value;
+    document.getElementById('stat-model').textContent = data.model_used.replace(/_/g, ' ');
+  }
+
+  function renderChart(chart) {
+    const ctx = document.getElementById('anomaly-chart').getContext('2d');
+
+    const pointColors = chart.is_anomaly.map(flag => flag ? '#FF6B5E' : 'rgba(79,209,197,0)');
+    const pointRadii = chart.is_anomaly.map(flag => flag ? 4 : 0);
+
+    if (chartInstance) chartInstance.destroy();
+
+    chartInstance = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chart.timestamps.map(t => new Date(t).toLocaleString()),
+        datasets: [{
+          label: 'Value',
+          data: chart.values,
+          borderColor: '#4FD1C5',
+          borderWidth: 2,
+          pointBackgroundColor: pointColors,
+          pointRadius: pointRadii,
+          pointHoverRadius: 6,
+          tension: 0.15,
+          fill: false,
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#111A2C',
+            borderColor: '#20304A',
+            borderWidth: 1,
+            titleColor: '#E7ECF3',
+            bodyColor: '#8B96A8',
+            padding: 10,
+          }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#8B96A8', maxTicksLimit: 8, font: { family: 'IBM Plex Mono', size: 10 } },
+            grid: { color: '#1C2A42' }
+          },
+          y: {
+            ticks: { color: '#8B96A8', font: { family: 'IBM Plex Mono', size: 10 } },
+            grid: { color: '#1C2A42' }
+          }
+        }
+      }
+    });
+  }
+
+  function renderTable(anomalies) {
+    const wrap = document.getElementById('table-body-wrap');
+
+    if (anomalies.length === 0) {
+      wrap.innerHTML = `<div class="empty-state">No anomalies detected in this dataset.</div>`;
+      return;
+    }
+
+    const rows = anomalies.map(a => `
+      <tr>
+        <td class="mono" style="color:var(--muted);">${new Date(a.timestamp).toLocaleString()}</td>
+        <td class="mono">${a.value}</td>
+        <td class="mono">${a.z_score}</td>
+        <td>${a.direction}</td>
+        <td><span class="severity-badge severity-${a.severity}">${a.severity}</span></td>
+      </tr>
+    `).join('');
+
+    wrap.innerHTML = `
+      <table>
+        <thead>
+          <tr>
+            <th>Timestamp</th>
+            <th>Value</th>
+            <th>Z-Score</th>
+            <th>Direction</th>
+            <th>Severity</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    `;
+  }
+
+  loadAnomalyData();
+</script>
+
+</body>
+</html>
